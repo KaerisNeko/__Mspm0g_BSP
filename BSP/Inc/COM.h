@@ -5,8 +5,8 @@
 #include "HRT.h"
 #include <string.h>
 
-#define COM_UART_INST           UART_0_INST
-#define COM_UART_IRQN_HANDLER   UART0_IRQHandler
+#define COM_UART_INST           UART_COM_INST
+#define COM_UART_IRQN_HANDLER   UART_COM_INST_IRQHandler
 #define COM_BUF_SIZE            256
 #define COM_RX_END_CHAR         '\n'
 
