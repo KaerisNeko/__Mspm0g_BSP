@@ -42,7 +42,6 @@ void COM_Receive(uint8_t* data, uint16_t* size) {
 }
 
 void COM_UART_IRQN_HANDLER(void) {
-    DL_GPIO_setPins(PERF_IND_PORT, PERF_IND_IT_EN_PIN);
     uint32_t iidx = DL_UART_Main_getPendingInterrupt(COM_UART_INST);
     
     if (iidx == DL_UART_IIDX_TX) {
@@ -73,6 +72,5 @@ void COM_UART_IRQN_HANDLER(void) {
     }
 
     RET:
-    DL_GPIO_clearPins(PERF_IND_PORT, PERF_IND_IT_EN_PIN);
     return;
 }
