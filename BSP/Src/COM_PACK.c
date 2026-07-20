@@ -23,7 +23,18 @@ uint16_t COMPACK_cmdMatchCur[COMPACK_CMD_MAX_NUM];
 uint8_t COMPACK_cmdNotMatch[COMPACK_CMD_MAX_NUM];
 char* COMPACK_cmdIrrelevantChars = COMPACK_CMD_IRRELEVANT_CHARS;
 
-char strbuf[256];
+char COMPACK_cmdFeedbackStr[COMPACK_FDBK_BUF_LEN];
+
+uint8_t COMPACK_CheckCharInString(char ch, char* str) {
+    uint16_t i = 0;
+    while (str[i] != '\0') {
+        if (str[i] == ch) {
+            return 1;
+        }
+        i++;
+    }
+    return 0;
+}
 
 uint16_t COMPACK_ExecuteCmd(uint16_t cmdIndex, char* str) {
     uint16_t i = 0;
@@ -71,16 +82,7 @@ void COMPACK_Decode(char* str) {
     uint16_t i = 0, j = 0;
     for (; str[j] != '\0'; j++) {
         // Check irrelevant
-        uint16_t k = 0;
-        uint8_t isIrrelevant = 0;
-        while (COMPACK_cmdIrrelevantChars[k] != '\0') {
-            if (str[j] == COMPACK_cmdIrrelevantChars[k]) {
-                isIrrelevant = 1;
-                break;
-            }
-            k++;
-        }
-        if (isIrrelevant) {
+        if (COMPACK_CheckCharInString(str[j], COMPACK_cmdIrrelevantChars)) {
             continue;
         }
         
@@ -101,6 +103,7 @@ void COMPACK_Decode(char* str) {
     // Start cmd decoding
     memset(COMPACK_cmdMatchCur, 0, sizeof(COMPACK_cmdMatchCur));
     memset(COMPACK_cmdNotMatch, 0, sizeof(COMPACK_cmdNotMatch));
+    memset(COMPACK_cmdFeedbackStr, 0, sizeof(COMPACK_cmdFeedbackStr));
     for (i = 0; str[i] != '\0'; ) {
         
         // Scan cmd
@@ -114,7 +117,7 @@ void COMPACK_Decode(char* str) {
             char* curCmdName = COMPACK_cmdStructArr[curCmdIndex].name;
             uint16_t* curCmdMatchCur = COMPACK_cmdMatchCur + curCmdIndex;
             
-            if (str[i] == '=' || str[i] == ',') {
+            if (COMPACK_CheckCharInString(str[i], COMPACK_CMD_DATA_SEPARATOR)) {
                 // Cmd end
                 if (curCmdName[*curCmdMatchCur] == '\0') {
                     // Cmd confirm match
@@ -125,6 +128,9 @@ void COMPACK_Decode(char* str) {
                         strParam = str + i;     // doesn't have a param
                     }
                     COMPACK_ExecuteCmd(curCmdIndex, strParam);
+                    // Cmd parsed, fdbk
+                    strcat(COMPACK_cmdFeedbackStr, curCmdName);
+                    strcat(COMPACK_cmdFeedbackStr, COMPACK_FDBK_SEPARATOR);
                 }
             } else if (curCmdName[*curCmdMatchCur] == str[i]) {
                 // Cmd single char match
@@ -138,13 +144,14 @@ void COMPACK_Decode(char* str) {
             curCmdIndex++;
         }
 
-        if (str[i] == '=' || str[i] == ',') {
+        // Cmd end
+        if (COMPACK_CheckCharInString(str[i], COMPACK_CMD_DATA_SEPARATOR)) {
             // Reset
             memset(COMPACK_cmdMatchCur, 0, sizeof(COMPACK_cmdMatchCur));
             memset(COMPACK_cmdNotMatch, 0, sizeof(COMPACK_cmdNotMatch));
 
             // Next cmd
-            while (str[i] != ',' && str[i] != '\0') {
+            while (COMPACK_CheckCharInString(str[i], COMPACK_CMD_SEPARATOR) == 0 && str[i] != '\0') {
                 i++;
             }
             if (str[i] == '\0') {
@@ -157,5 +164,8 @@ void COMPACK_Decode(char* str) {
         }
 
         i++;
+    }
+    if (strlen(COMPACK_cmdFeedbackStr) > 0) {
+        COM_Transmit((uint8_t*)COMPACK_cmdFeedbackStr, strlen(COMPACK_cmdFeedbackStr));
     }
 }

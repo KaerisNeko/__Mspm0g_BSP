@@ -4,7 +4,11 @@
 #include "ti_msp_dl_config.h"
 
 #define COMPACK_CMD_MAX_NUM             32
-#define COMPACK_CMD_IRRELEVANT_CHARS    " \r\n\"\t{}\\"
+#define COMPACK_FDBK_BUF_LEN            256
+#define COMPACK_FDBK_SEPARATOR          "\n"
+#define COMPACK_CMD_IRRELEVANT_CHARS    " \r\n\"\t{}"
+#define COMPACK_CMD_DATA_SEPARATOR      "=,;"
+#define COMPACK_CMD_SEPARATOR           ",;"
 
 
 
