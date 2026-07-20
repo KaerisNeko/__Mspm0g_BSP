@@ -1,4 +1,5 @@
 #include "COM.h"
+#include "HRT.h"
 
 volatile uint8_t COM_txBuf[COM_BUF_SIZE];
 volatile uint8_t COM_txBusy = 0;
@@ -8,9 +9,14 @@ volatile uint16_t COM_txSize = 0;
 volatile uint8_t COM_rxBuf[COM_BUF_SIZE];
 volatile uint8_t COM_rxBusy = 0;
 volatile uint16_t COM_rxSize = 0;
+volatile uint32_t COM_rxStartTime = 0;
 
 void COM_Init(void) {
-    
+    NVIC_EnableIRQ(COM_NVIC_IRQN);
+}
+
+uint8_t COM_TransmitBusy(void) {
+    return COM_txBusy;
 }
 
 void COM_Transmit(uint8_t* data, uint16_t size) {
@@ -23,6 +29,11 @@ void COM_Transmit(uint8_t* data, uint16_t size) {
     COM_txBusy = 1;
     memcpy(COM_txBuf, data, size);
     DL_UART_Main_transmitData(COM_UART_INST, *COM_txBuf);
+}
+
+void COM_TransmitBlocking(uint8_t* data, uint16_t size) {
+    while (COM_TransmitBusy());
+    COM_Transmit(data, size);
 }
 
 uint8_t COM_ReceiveValid(void) {
