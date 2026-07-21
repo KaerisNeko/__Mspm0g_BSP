@@ -9,5 +9,6 @@ typedef struct DT_Context_t {
 
 void DT_Init(DT_Context* ctx);
 uint32_t DT_GetDeltaTime_us(DT_Context* ctx);
+void DT_UpdateRateSyncDelay(DT_Context* ctx, uint16_t rate);
 
 #endif
