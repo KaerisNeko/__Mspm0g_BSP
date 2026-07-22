@@ -5,6 +5,7 @@
 
 #define COMPACK_CMD_MAX_NUM             32
 #define COMPACK_FDBK_BUF_LEN            256
+#define COMPACK_CMD_RETURN_STR_MAXLEN   256
 #define COMPACK_FDBK_SEPARATOR          "\n"
 #define COMPACK_CMD_IRRELEVANT_CHARS    " \r\n\"\t{}"
 #define COMPACK_CMD_DATA_SEPARATOR      "=,;"
@@ -26,7 +27,7 @@ typedef struct COMPACK_CmdStruct_t {
     void* pData;
 }COMPACK_CmdStruct;
 
-typedef void (*COMPACK_CmdFuncCallback)(char*);
+typedef char* (*COMPACK_CmdFuncCallback)(char*);
 
 
 
