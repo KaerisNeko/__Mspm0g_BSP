@@ -4,14 +4,21 @@
 #include <string.h>
 #include <stdlib.h>
 
-extern void PUL_Start(char*);
-extern void PUL_Stop(char*);
-extern void PUL_SetDuty(char*);
+#include "PID.h"
+extern char* PUL_Set_str(char* cmd);
+extern char* PUL_Stop_str(char* cmd);
+extern PID_Struct MAIN_speedPID;
+extern char* MAIN_PidToString(char* cmd);
+extern char* MAIN_SetPidTarget(char* cmd);
 
 COMPACK_CmdStruct COMPACK_cmdStructArr[COMPACK_CMD_MAX_NUM] = {
-    { "PUL_Start",      COMPACK_CMD_FUNC,   PUL_Start },
-    { "PUL_Stop",       COMPACK_CMD_FUNC,   PUL_Stop },
-    { "PUL_Duty",       COMPACK_CMD_FUNC,   PUL_SetDuty },
+    { "PUL",        COMPACK_CMD_FUNC,       PUL_Set_str },
+    { "PUL_Stop",   COMPACK_CMD_FUNC,       PUL_Stop_str },
+    { "PID_kp",     COMPACK_CMD_FLOAT,      &(MAIN_speedPID.kp) },
+    { "PID_ki",     COMPACK_CMD_FLOAT,      &(MAIN_speedPID.ki) },
+    { "PID_kd",     COMPACK_CMD_FLOAT,      &(MAIN_speedPID.kd) },
+    { "PID",        COMPACK_CMD_FUNC,       MAIN_PidToString },
+    { "PID_target", COMPACK_CMD_FUNC,       MAIN_SetPidTarget },
 };
 
 
@@ -36,9 +43,11 @@ uint8_t COMPACK_CheckCharInString(char ch, char* str) {
     return 0;
 }
 
-uint16_t COMPACK_ExecuteCmd(uint16_t cmdIndex, char* str) {
+char* COMPACK_ExecuteCmd(uint16_t cmdIndex, char* str) {
     uint16_t i = 0;
-    for (i = 0; str[i] != ',' && str[i] != '\0'; i++);
+    for (i = 0; 
+            COMPACK_CheckCharInString(str[i], COMPACK_CMD_SEPARATOR) == 0 && str[i] != '\0';
+            i++);
     char temp = str[i];
     str[i] = '\0';
     
@@ -48,25 +57,33 @@ uint16_t COMPACK_ExecuteCmd(uint16_t cmdIndex, char* str) {
         goto RET;
     }
     
+    static char cmdReturnStr[COMPACK_CMD_RETURN_STR_MAXLEN];
+    cmdReturnStr[0] = '\0';
     switch (curCmdStruct->cmdType) {
         case COMPACK_CMD_INT: {
             *((int*)(curCmdStruct->pData)) = atoi(str);
+            strcpy(cmdReturnStr, str);
             break;
         }
         case COMPACK_CMD_FLOAT: {
             *((float*)(curCmdStruct->pData)) = (float)atof(str);
+            strcpy(cmdReturnStr, str);
             break;
         }
         case COMPACK_CMD_DOUBLE: {
             *((double*)(curCmdStruct->pData)) = atof(str);
+            strcpy(cmdReturnStr, str);
             break;
         }
         case COMPACK_CMD_STRING: {
             strcpy((char*)(curCmdStruct->pData), str);
+            strcpy(cmdReturnStr, str);
             break;
         }
         case COMPACK_CMD_FUNC: {
-            ((COMPACK_CmdFuncCallback)curCmdStruct->pData)(str);
+            char* strRet = 
+                    ((COMPACK_CmdFuncCallback)curCmdStruct->pData)(str);
+            strcpy(cmdReturnStr, strRet);
             break;
         }
         default: break;
@@ -74,7 +91,7 @@ uint16_t COMPACK_ExecuteCmd(uint16_t cmdIndex, char* str) {
     
     RET:
     str[i] = temp;
-    return 0;
+    return cmdReturnStr;
 }
 
 void COMPACK_Decode(char* str) {
@@ -127,9 +144,12 @@ void COMPACK_Decode(char* str) {
                     } else {
                         strParam = str + i;     // doesn't have a param
                     }
-                    COMPACK_ExecuteCmd(curCmdIndex, strParam);
+                    char* strRet =
+                            COMPACK_ExecuteCmd(curCmdIndex, strParam);
                     // Cmd parsed, fdbk
                     strcat(COMPACK_cmdFeedbackStr, curCmdName);
+                    strcat(COMPACK_cmdFeedbackStr, ": ");
+                    strcat(COMPACK_cmdFeedbackStr, strRet);
                     strcat(COMPACK_cmdFeedbackStr, COMPACK_FDBK_SEPARATOR);
                 }
             } else if (curCmdName[*curCmdMatchCur] == str[i]) {
