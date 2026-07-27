@@ -14,8 +14,8 @@ void GYRO_Init(void);
 void GYRO_Update(void);
 
 uint8_t GYRO_I2CIsBusy(void);
-void GYRO_I2CTransmit(uint8_t* data, uint16_t size);
-void GYRO_I2CReceive(uint8_t* data, uint16_t size);
+void GYRO_I2CWrite_IT(uint8_t* data, uint16_t size);
+void GYRO_I2CRead_IT(uint8_t* data, uint16_t size);
 uint8_t GYRO_I2CReceiveValid(void);
 
 #endif

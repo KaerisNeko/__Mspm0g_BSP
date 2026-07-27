@@ -86,15 +86,7 @@ uint8_t GYRO_I2CIsBusy(void) {
     return 0;
 }
 
-void GYRO_I2CTransmit(uint8_t* data, uint16_t size) {
-    if (GYRO_i2cState != GYRO_i2cStateIdle) {
-        return;
-    }
-    if (size > GYRO_I2C_BUF_SIZE) {
-        return;
-    }
-    
-    memcpy(GYRO_txBuf, data, size);
+static void GYRO_I2CTransmitITStart(uint16_t size) {
     GYRO_txSize = size;
     GYRO_txferedLen = DL_I2C_fillControllerTXFIFO(GYRO_I2C_INST, GYRO_txBuf, size);
     if (GYRO_txferedLen < size) {
@@ -107,7 +99,7 @@ void GYRO_I2CTransmit(uint8_t* data, uint16_t size) {
     GYRO_i2cState = GYRO_i2cStateTxStarted;
 }
 
-void GYRO_I2CReceive(uint8_t* data, uint16_t size) {
+void GYRO_I2CWrite_IT(uint8_t* data, uint16_t size) {
     if (GYRO_i2cState != GYRO_i2cStateIdle) {
         return;
     }
@@ -115,14 +107,29 @@ void GYRO_I2CReceive(uint8_t* data, uint16_t size) {
         return;
     }
     
+    memcpy(GYRO_txBuf, data, size);
+    GYRO_I2CTransmitITStart(size);
+}
+
+static void GYRO_I2CReceiveITStart(uint16_t size) {
     GYRO_rxSize = size;
     GYRO_rxferedLen = 0;
-    GYRO_i2cState = GYRO_i2cStateRxStarted;
-    GYRO_rxDest = data;
-
     DL_I2C_startControllerTransfer(
             GYRO_I2C_INST, GYRO_I2C_ADDR,
             DL_I2C_CONTROLLER_DIRECTION_RX, GYRO_rxSize);
+    GYRO_i2cState = GYRO_i2cStateRxStarted;
+}
+
+void GYRO_I2CRead_IT(uint8_t* data, uint16_t size) {
+    if (GYRO_i2cState != GYRO_i2cStateIdle) {
+        return;
+    }
+    if (size > GYRO_I2C_BUF_SIZE) {
+        return;
+    }
+
+    GYRO_rxDest = data;
+    GYRO_I2CReceiveITStart(size);
 }
 
 uint8_t GYRO_I2CReceiveValid(void) {
