@@ -18,4 +18,8 @@ void GYRO_I2CWrite_IT(uint8_t* data, uint16_t size);
 void GYRO_I2CRead_IT(uint8_t* data, uint16_t size);
 uint8_t GYRO_I2CReceiveValid(void);
 
+void GYRO_I2CWriteReg(uint8_t addr, uint8_t* data, uint16_t size);
+void GYRO_I2CReadReg(uint8_t addr, uint8_t* data, uint16_t size);
+uint8_t GYRO_I2CReadRegValid(void);
+
 #endif

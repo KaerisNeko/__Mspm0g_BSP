@@ -16,7 +16,15 @@ typedef enum GYRO_I2cState_t {
     GYRO_i2cStateRxCplt,
 }GYRO_I2cState;
 
+typedef enum GYRO_I2cReadRegState_t {
+    GYRO_i2cReadRegStateIdle = 0,
+
+    GYRO_i2cReadRegStateWaitWriteAddr,
+    GYRO_i2cReadRegStateWaitRead,
+}GYRO_I2cReadRegState;
+
 volatile GYRO_I2cState GYRO_i2cState = GYRO_i2cStateIdle;
+GYRO_I2cReadRegState GYRO_i2cReadRegState = GYRO_i2cReadRegStateIdle;
 
 // Tx vars:
 volatile static uint16_t GYRO_txSize = 0;
@@ -28,6 +36,11 @@ volatile static uint16_t GYRO_rxferedLen = 0;
 static uint8_t* GYRO_rxDest = NULL;
 static uint8_t GYRO_rxValid = 0;
 
+// Read reg vars:
+static uint8_t* GYRO_readRegDest = NULL;
+static uint8_t GYRO_readRegSize = 0;
+static uint8_t GYRO_readRegValid = 0;
+
 void GYRO_Init(void) {
     DL_I2C_enableInterrupt(GYRO_I2C_INST,
         DL_I2C_INTERRUPT_CONTROLLER_TX_DONE |
@@ -37,6 +50,9 @@ void GYRO_Init(void) {
     );
     NVIC_EnableIRQ(GYRO_I2C_IRQN);
 }
+
+static void GYRO_I2CTransmitITStart(uint16_t size);
+static void GYRO_I2CReceiveITStart(uint16_t size);
 
 void GYRO_Update(void) {
     switch (GYRO_i2cState) {
@@ -77,10 +93,35 @@ void GYRO_Update(void) {
 
         default: break;
     }
+    
+    switch (GYRO_i2cReadRegState) {
+        case GYRO_i2cReadRegStateWaitWriteAddr: {
+            if (GYRO_i2cState == GYRO_i2cStateIdle) {
+                GYRO_rxDest = GYRO_readRegDest;
+                GYRO_i2cReadRegState = GYRO_i2cReadRegStateWaitRead;
+                GYRO_I2CReceiveITStart(GYRO_readRegSize);
+            }
+            break;
+        }
+        case GYRO_i2cReadRegStateWaitRead: {
+            if (GYRO_I2CReceiveValid()) {
+                GYRO_readRegValid = 1;
+                GYRO_readRegDest = NULL;
+                GYRO_readRegSize = 0;
+                GYRO_i2cReadRegState = GYRO_i2cReadRegStateIdle;
+            }
+            break;
+        }
+
+        default: break;
+    }
 }
 
 uint8_t GYRO_I2CIsBusy(void) {
     if (GYRO_i2cState != GYRO_i2cStateIdle) {
+        return 1;
+    }
+    if (GYRO_i2cReadRegState != GYRO_i2cReadRegStateIdle) {
         return 1;
     }
     return 0;
@@ -179,4 +220,36 @@ void GYRO_I2C_IRQ_HANDLER(void) {
             }
         }
     }
+}
+
+
+
+void GYRO_I2CWriteReg(uint8_t addr, uint8_t* data, uint16_t size) {
+    if (GYRO_I2CIsBusy()) {
+        return;
+    }
+    
+    GYRO_txBuf[0] = addr;
+    memcpy(GYRO_txBuf + 1, data, size);
+    GYRO_I2CTransmitITStart(size + 1);
+}
+
+void GYRO_I2CReadReg(uint8_t addr, uint8_t* data, uint16_t size) {
+    if (GYRO_I2CIsBusy()) {
+        return;
+    }
+    
+    GYRO_txBuf[0] = addr;
+    
+    GYRO_readRegDest = data;
+    GYRO_readRegSize = size;
+    GYRO_readRegValid = 0;
+    GYRO_i2cReadRegState = GYRO_i2cReadRegStateWaitWriteAddr;
+    GYRO_I2CTransmitITStart(1);
+}
+
+uint8_t GYRO_I2CReadRegValid(void) {
+    uint8_t res = GYRO_readRegValid;
+    GYRO_readRegValid = 0;
+    return res;
 }
