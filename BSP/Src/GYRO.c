@@ -224,6 +224,12 @@ void GYRO_I2C_IRQ_HANDLER(void) {
 
 
 
+void GYRO_WaitForI2CIdle(void) {
+    while (GYRO_I2CIsBusy()) {
+        GYRO_Update();
+    }
+}
+
 void GYRO_I2CWriteReg(uint8_t addr, uint8_t* data, uint16_t size) {
     if (GYRO_I2CIsBusy()) {
         return;
@@ -232,6 +238,12 @@ void GYRO_I2CWriteReg(uint8_t addr, uint8_t* data, uint16_t size) {
     GYRO_txBuf[0] = addr;
     memcpy(GYRO_txBuf + 1, data, size);
     GYRO_I2CTransmitITStart(size + 1);
+}
+
+void GYRO_I2CWriteRegBlocking(uint8_t addr, uint8_t* data, uint16_t size) {
+    GYRO_WaitForI2CIdle();
+    GYRO_I2CWriteReg(addr, data, size);
+    GYRO_WaitForI2CIdle();
 }
 
 void GYRO_I2CReadReg(uint8_t addr, uint8_t* data, uint16_t size) {
@@ -243,13 +255,116 @@ void GYRO_I2CReadReg(uint8_t addr, uint8_t* data, uint16_t size) {
     
     GYRO_readRegDest = data;
     GYRO_readRegSize = size;
-    GYRO_readRegValid = 0;
+    // GYRO_readRegValid = 0;
     GYRO_i2cReadRegState = GYRO_i2cReadRegStateWaitWriteAddr;
     GYRO_I2CTransmitITStart(1);
+}
+
+void GYRO_I2CReadRegBlocking(uint8_t addr, uint8_t* data, uint16_t size) {
+    GYRO_WaitForI2CIdle();
+    GYRO_I2CReadReg(addr, data, size);
+    GYRO_WaitForI2CIdle();
 }
 
 uint8_t GYRO_I2CReadRegValid(void) {
     uint8_t res = GYRO_readRegValid;
     GYRO_readRegValid = 0;
     return res;
+}
+
+
+
+static void GYRO_I2CWriteRegByteBlocking(uint8_t addr, uint8_t data) {
+    uint8_t d = 0;
+    d = data;
+    GYRO_I2CWriteRegBlocking(addr, &d, 1);
+}
+
+void GYRO_InitSys(void) {
+    // Reset
+    GYRO_I2CWriteRegByteBlocking(GYRO_MPU6050_RA_PWR_MGMT_1, 0x80);
+    delay_cycles(CPUCLK_FREQ / 10);
+
+    // Power Management Registers
+    GYRO_I2CWriteRegByteBlocking(GYRO_MPU6050_RA_PWR_MGMT_1, 0x00);
+
+    // Set FSR
+    GYRO_SetGyroFSR(3);
+    GYRO_WaitForI2CIdle();
+
+    GYRO_SetAccelFSR(0);
+    GYRO_WaitForI2CIdle();
+
+    // Set rate
+    GYRO_SetRate(50);
+    GYRO_WaitForI2CIdle();
+
+    GYRO_SetLPF(25);
+    GYRO_WaitForI2CIdle();
+
+    // Disable all interrupts
+    GYRO_I2CWriteRegByteBlocking(GYRO_MPU6050_INT_EN_REG, 0x00);
+    // I2C Master Mode Off
+    GYRO_I2CWriteRegByteBlocking(GYRO_MPU6050_USER_CTRL_REG, 0x00);
+    // FIFO Close FIFO
+    GYRO_I2CWriteRegByteBlocking(GYRO_MPU6050_FIFO_EN_REG, 0x00);
+    // INT pin low level is effective
+    GYRO_I2CWriteRegByteBlocking(GYRO_MPU6050_INTBP_CFG_REG, 0x80);
+
+    GYRO_I2CWriteRegByteBlocking(GYRO_MPU6050_RA_PWR_MGMT_1, 0x01);
+    GYRO_I2CWriteRegByteBlocking(GYRO_MPU6050_RA_PWR_MGMT_2, 0x00);
+    GYRO_SetRate(50);
+    GYRO_WaitForI2CIdle();
+}
+
+void GYRO_SetGyroFSR(uint8_t fsr) {
+    static uint8_t data = 0;
+    data = fsr << 3;
+    GYRO_I2CWriteReg(GYRO_MPU6050_GYRO_CFG_REG, &data, 1);
+}
+
+void GYRO_SetAccelFSR(uint8_t fsr) {
+    static uint8_t data = 0;
+    data = fsr << 3;
+    GYRO_I2CWriteReg(GYRO_MPU6050_ACCEL_CFG_REG, &data, 1);
+}
+
+void GYRO_SetRate(uint16_t rate) {
+    static uint8_t data = 0;
+    if (rate > 1000) {
+        rate = 1000;
+    }
+    if (rate < 4) {
+        rate = 4;
+    }
+    data = 1000 / rate - 1;
+    GYRO_I2CWriteReg(GYRO_MPU6050_SAMPLE_RATE_REG, &data, 1);
+}
+
+void GYRO_SetLPF(uint16_t freq) {
+    static uint8_t data = 0;
+    if (freq >= 188) {
+        data = 1;
+    } else if (freq >= 98) {
+        data = 2;
+    } else if (freq >= 42) {
+        data = 3;
+    } else if (freq >= 20) {
+        data = 4;
+    } else if (freq >= 10) {
+        data = 5;
+    } else {
+        data = 6;
+    }
+    GYRO_I2CWriteReg(GYRO_MPU6050_CFG_REG, &data, 1);
+}
+
+static uint8_t* GYRO_gyroDataDest = NULL;
+
+void GYRO_GetGyroData(uint8_t* data) {
+    if (data == NULL) {
+        return;
+    }
+    GYRO_gyroDataDest = data;
+    GYRO_I2CReadReg(GYRO_MPU6050_GYRO_OUT, GYRO_gyroDataDest, 6);
 }
