@@ -1,6 +1,8 @@
 #include "GYRO.h"
 #include <string.h>
 
+#ifndef GYRO_DISABLE_IMPORT
+
 uint8_t GYRO_txBuf[GYRO_I2C_BUF_SIZE];
 uint8_t GYRO_rxBuf[GYRO_I2C_BUF_SIZE];
 
@@ -368,3 +370,5 @@ void GYRO_GetGyroData(uint8_t* data) {
     GYRO_gyroDataDest = data;
     GYRO_I2CReadReg(GYRO_MPU6050_GYRO_OUT, GYRO_gyroDataDest, 6);
 }
+
+#endif

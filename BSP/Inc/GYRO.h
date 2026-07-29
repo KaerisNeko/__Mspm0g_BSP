@@ -3,6 +3,10 @@
 
 #include "ti_msp_dl_config.h"
 
+#define GYRO_DISABLE_IMPORT
+
+#ifndef GYRO_DISABLE_IMPORT
+
 #define GYRO_I2C_ADDR           0x68
 #define GYRO_I2C_BUF_SIZE       256
 
@@ -50,5 +54,7 @@ void GYRO_SetRate(uint16_t rate);
 void GYRO_SetLPF(uint16_t freq);
 
 void GYRO_GetGyroData(uint8_t* data);
+
+#endif
 
 #endif
