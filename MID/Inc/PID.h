@@ -29,6 +29,8 @@ void PID_Init(PID_Struct* pid,
         float kp, float ki, float kd,
         float intgLim);
 
+void PID_Reset(PID_Struct* pid, float target, float ctrlVal);
+
 void PID_SetTarget(PID_Struct* pid, float target);
 void PID_SetCurVal(PID_Struct* pid, float curVal);
 float PID_Update(PID_Struct* pid);

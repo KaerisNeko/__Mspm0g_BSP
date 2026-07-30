@@ -23,6 +23,16 @@ void PID_Init(PID_Struct* pid,
     pid->ctrlValCeil = 0;
 }
 
+void PID_Reset(PID_Struct* pid, float target, float ctrlVal) {
+    pid->target = target;
+    pid->curVal = target;
+    pid->targetDelta = 0;
+    pid->targetDeltaOld = 0;
+    pid->dtCtx.timeOld = 0;
+    pid->intgAccum = 0;
+    pid->ctrlVal = ctrlVal;
+}
+
 void PID_Clamp(float* src, float floor, float ceil) {
     if (*src > ceil) {
         *src = ceil;
