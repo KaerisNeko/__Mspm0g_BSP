@@ -19,6 +19,7 @@ typedef struct PID_Struct_t {
     
     float intgAccum;
     
+    float ctrlValDelta;
     float ctrlVal;
 
     float ctrlValFloor;
@@ -35,5 +36,6 @@ void PID_SetTarget(PID_Struct* pid, float target);
 void PID_SetCurVal(PID_Struct* pid, float curVal);
 float PID_Update(PID_Struct* pid);
 float PID_GetCtrlVal(PID_Struct* pid);
+float PID_GetCtrlValDelta(PID_Struct* pid);
 
 #endif

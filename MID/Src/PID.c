@@ -18,6 +18,8 @@ void PID_Init(PID_Struct* pid,
     pid->intgLim = intgLim;
 
     pid->intgAccum = 0;
+
+    pid->ctrlValDelta;
     pid->ctrlVal = 0;
     pid->ctrlValFloor = 0;
     pid->ctrlValCeil = 0;
@@ -30,6 +32,7 @@ void PID_Reset(PID_Struct* pid, float target, float ctrlVal) {
     pid->targetDeltaOld = 0;
     pid->dtCtx.timeOld = 0;
     pid->intgAccum = 0;
+    pid->ctrlValDelta = 0;
     pid->ctrlVal = ctrlVal;
 }
 
@@ -75,6 +78,7 @@ float PID_Update(PID_Struct* pid) {
     resDelta += de / dt * pid->kd;
 
     // Sum
+    pid->ctrlValDelta = resDelta;
     pid->ctrlVal += resDelta;
     PID_Clamp(&pid->ctrlVal, pid->ctrlValFloor, pid->ctrlValCeil);
     pid->targetDeltaOld = pid->targetDelta;
@@ -83,4 +87,8 @@ float PID_Update(PID_Struct* pid) {
 
 float PID_GetCtrlVal(PID_Struct* pid) {
     return pid->ctrlVal;
+}
+
+float PID_GetCtrlValDelta(PID_Struct* pid) {
+    return pid->ctrlValDelta;
 }
