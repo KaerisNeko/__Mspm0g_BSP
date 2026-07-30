@@ -19,7 +19,7 @@ void PID_Init(PID_Struct* pid,
 
     pid->intgAccum = 0;
 
-    pid->ctrlValDelta;
+    pid->ctrlValDelta = 0;
     pid->ctrlVal = 0;
     pid->ctrlValFloor = 0;
     pid->ctrlValCeil = 0;
